@@ -2390,13 +2390,26 @@ namespace LuaPlayer
      * Sends a vendor window to the [Player] from the [WorldObject] specified.
      *
      * @param [WorldObject] sender
+     * @param uint32 vendorId = 0 : optional entry ID to use for the vendor item list, overriding the sender's default inventory
      */
     int SendListInventory(lua_State* L, Player* player)
     {
         WorldObject* obj = ALE::CHECKOBJ<WorldObject>(L, 2);
         uint32 vendorId = ALE::CHECKVAL<uint32>(L, 3, 0);
 
+        Creature* creature = obj->ToCreature();
+        bool addedVendorFlag = false;
+        if (vendorId && creature && !creature->HasNpcFlag(UNIT_NPC_FLAG_VENDOR))
+        {
+            creature->SetNpcFlag(UNIT_NPC_FLAG_VENDOR);
+            addedVendorFlag = true;
+        }
+
         player->GetSession()->SendListInventory(obj->GET_GUID(), vendorId);
+
+        if (addedVendorFlag)
+            creature->RemoveNpcFlag(UNIT_NPC_FLAG_VENDOR);
+
         return 0;
     }
 
@@ -5134,6 +5147,32 @@ namespace LuaPlayer
         (void)player;
         ALE::Push(L, false);
     #endif
+        return 1;
+    }
+    
+    /**
+     * Returns the [Player]s spent talent points in each talent tree for the active spec
+     *
+     * @return uint8 tree1, uint8 tree2, uint8 tree3
+     */
+    int GetTalentTreePoints(lua_State* L, Player* player)
+    {
+        uint8 specPoints[3] = {0, 0, 0};
+        player->GetTalentTreePoints(specPoints);
+        ALE::Push(L, specPoints[0]);
+        ALE::Push(L, specPoints[1]);
+        ALE::Push(L, specPoints[2]);
+        return 3;
+    }
+
+    /**
+     * Returns the index of the talent tree the [Player] has spent the most points in for the active spec
+     *
+     * @return uint8 treeIndex
+     */
+    int GetMostPointsTalentTree(lua_State* L, Player* player)
+    {
+        ALE::Push(L, player->GetMostPointsTalentTree());
         return 1;
     }
 };
